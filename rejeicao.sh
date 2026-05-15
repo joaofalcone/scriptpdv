@@ -82,7 +82,10 @@ do
             IFNULL(ncm, ''),
             IFNULL(classificacao_tributaria, ''),
             IFNULL(ibs_reducao, ''),
-            IFNULL(aliquota_ibs_uf, '')
+            IFNULL(aliquota_ibs_uf, ''),
+            IFNULL(cfop, ''),
+            IFNULL(cst, ''),
+            IFNULL(codigo_beneficio, '')
         FROM cupom_item
         WHERE id_cupom = $ID_CUPOM
           AND sequencia = $ITEM_ERRO
@@ -95,7 +98,7 @@ do
         continue
     fi
 
-    IFS='|' read -r NCM_ERRO CLASS_ERRO IBS_RED_ERRO ALIQ_IBS_UF_ERRO <<< "$DADOS_ERRO"
+    IFS='|' read -r NCM_ERRO CLASS_ERRO IBS_RED_ERRO ALIQ_IBS_UF_ERRO CFOP_ERRO CST_ERRO COD_BENEFICIO_ERRO <<< "$DADOS_ERRO"
 
     ITENS=$(sqlite3 -separator '|' "$DB" "
         SELECT
@@ -120,36 +123,45 @@ do
     COMPARTILHOU=0
 
     while IFS='|' read -r ITEM PLU NCM CLASS IBS_RED ALIQ_IBS_UF DESCRICAO
-do
-    INFO_IGUAL=""
+    do
+        INFO_IGUAL=""
 
-    if [ "$ITEM" != "$ITEM_ERRO" ]; then
-        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
-        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
-        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
-        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
-    fi
+        if [ "$ITEM" != "$ITEM_ERRO" ]; then
+            [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
+            [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
+            [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
+            [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
+        fi
 
-    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
+        INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
 
-    if [ "$ITEM" = "$ITEM_ERRO" ]; then
-        printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
-            "$ITEM" "$PLU" "$DESCRICAO"
+        if [ "$ITEM" = "$ITEM_ERRO" ]; then
+            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
+                "$ITEM" "$PLU" "$DESCRICAO"
 
-    elif [ -n "$INFO_IGUAL" ]; then
-        COMPARTILHOU=1
-        printf "    ITEM %-4s PLU: %-15s %s ${AMARELO}%s${RESET}\n" \
-            "$ITEM" "$PLU" "$DESCRICAO" "$INFO_IGUAL"
+        elif [ -n "$INFO_IGUAL" ]; then
+            COMPARTILHOU=1
+            printf "    ITEM %-4s PLU: %-15s %s ${AMARELO}%s${RESET}\n" \
+                "$ITEM" "$PLU" "$DESCRICAO" "$INFO_IGUAL"
 
-    else
-        printf "    ITEM %-4s PLU: %-15s %s\n" \
-            "$ITEM" "$PLU" "$DESCRICAO"
-    fi
-done < <(printf '%s\n' "$ITENS")
+        else
+            printf "    ITEM %-4s PLU: %-15s %s\n" \
+                "$ITEM" "$PLU" "$DESCRICAO"
+        fi
+    done < <(printf '%s\n' "$ITENS")
 
     if [ "$COMPARTILHOU" -eq 0 ]; then
         printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
     fi
+
+    printf "\n${LARANJA}Dados tributáveis do item com erro:${RESET}\n"
+    printf "${LARANJA}- ncm: %s${RESET}\n" "$NCM_ERRO"
+    printf "${LARANJA}- classificacao_tributaria: %s${RESET}\n" "$CLASS_ERRO"
+    printf "${LARANJA}- ibs_reducao: %s${RESET}\n" "$IBS_RED_ERRO"
+    printf "${LARANJA}- aliquota_ibs_uf: %s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
+    printf "${LARANJA}- cfop: %s${RESET}\n" "$CFOP_ERRO"
+    printf "${LARANJA}- cst: %s${RESET}\n" "$CST_ERRO"
+    printf "${LARANJA}- codigo_beneficio: %s${RESET}\n" "$COD_BENEFICIO_ERRO"
 
     echo
 done
