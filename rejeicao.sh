@@ -135,14 +135,13 @@ do
     INFO_IGUAL=""
 
     if [ "$ITEM" != "$ITEM_ERRO" ]; then
-        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}ncm "
-        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}classificacao_tributaria "
-        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}ibs_reducao "
-        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}aliquota_ibs_uf "
+        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
+        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
+        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
+        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
     fi
 
-    # Remove espaço final
-    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/[[:space:]]*$//')
+    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
 
     if [ "$ITEM" = "$ITEM_ERRO" ]; then
         printf "${LARANJA}>>> ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s${RESET}\n" \
@@ -150,7 +149,7 @@ do
 
     elif [ -n "$INFO_IGUAL" ]; then
         COMPARTILHOU=1
-        printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s ${AMARELO}%s${RESET}\n" \
+        printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s <<< CAMPOS IGUAIS AO ITEM COM ERRO: (${AMARELO}%s${RESET}) REVISAR\n" \
             "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO" "$INFO_IGUAL"
 
     else
