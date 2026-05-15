@@ -8,7 +8,7 @@ sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 
 DB="/opt/checkout/pdv_out.db"
 
-# Laranja (ANSI 256-color, código 208) + negrito
+# Laranja na fonte + negrito, sem alterar fundo
 LARANJA='\033[1;38;5;208m'
 RESET='\033[0m'
 
@@ -25,33 +25,26 @@ ORDER BY id DESC;
 do
     echo "=============================================================="
 
-    # Número do cupom em laranja e negrito
-    printf "CUPOM: ${LARANJA}%s${RESET}\n" "$NUM"
-
-    echo "REJEIÇÃO: $REJEICAO"
+    printf "${LARANJA}CUPOM: %s${RESET}\n" "$NUM"
+    printf "${LARANJA}REJEIÇÃO:${RESET} %s\n" "$REJEICAO"
     echo
 
-    # Extrai o número do item no padrão 'nItem: X'
     ITEM_ERRO=$(echo "$REJEICAO" | grep -o 'nItem: [0-9]\+' | awk '{print $2}')
 
-    # Busca o ID interno do cupom usando o número do cupom de contingência
     ID=$(sqlite3 "$DB" "SELECT id FROM cupom WHERE numero = '$NUM' LIMIT 1;")
 
-    # Se não encontrar o cupom, mostra apenas a rejeição
     if [ -z "$ID" ]; then
         echo "Cupom não encontrado na tabela cupom."
         echo
         continue
     fi
 
-    # Se não houver item específico na rejeição
     if [ -z "$ITEM_ERRO" ]; then
         echo "Nenhum item específico informado na rejeição."
         echo
         continue
     fi
 
-    # Lista os itens do cupom e destaca em laranja o item com erro
     sqlite3 -separator '|' "$DB" "
     SELECT
         sequencia,
@@ -63,7 +56,6 @@ do
     " | while IFS='|' read -r ITEM PLU DESCRICAO
     do
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            # Texto laranja + negrito (sem alterar o fundo)
             printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s <<< ITEM COM ERRO${RESET}\n" \
                 "$ITEM" "$PLU" "$DESCRICAO"
         else
