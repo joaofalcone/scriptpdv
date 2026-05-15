@@ -122,27 +122,36 @@ do
 
     COMPARTILHOU=0
 
-    while IFS='|' read -r ITEM PLU NCM CLASS IBS_RED ALIQ_IBS_UF DESCRICAO
-    do
-        INFO_IGUAL=""
+    while IFS='|' read -r ITEM PLU NCM CLASS IBS_RED ALIQ_IBS_UF CFOP CST COD_BENEFICIO DESCRICAO
+do
+    INFO_IGUAL=""
 
-        if [ "$ITEM" != "$ITEM_ERRO"
-        INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
+    if [ "$ITEM" != "$ITEM_ERRO" ]; then
+        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
+        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
+        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
+        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
+        [ -n "$CFOP_ERRO" ] && [ "$CFOP" = "$CFOP_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| cfop "
+        [ -n "$CST_ERRO" ] && [ "$CST" = "$CST_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| cst "
+        [ -n "$COD_BENEFICIO_ERRO" ] && [ "$COD_BENEFICIO" = "$COD_BENEFICIO_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| codigo_beneficio "
+    fi
 
-        if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
-                "$ITEM" "$PLU" "$DESCRICAO"
+    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
 
-        elif [ -n "$INFO_IGUAL" ]; then
-            COMPARTILHOU=1
-            printf "    ITEM %-4s PLU: %-15s %s ${AMARELO}%s${RESET}\n" \
-                "$ITEM" "$PLU" "$DESCRICAO" "$INFO_IGUAL"
+    if [ "$ITEM" = "$ITEM_ERRO" ]; then
+        printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
+            "$ITEM" "$PLU" "$DESCRICAO"
 
-        else
-            printf "    ITEM %-4s PLU: %-15s %s\n" \
-                "$ITEM" "$PLU" "$DESCRICAO"
-        fi
-    done < <(printf '%s\n' "$ITENS")
+    elif [ -n "$INFO_IGUAL" ]; then
+        COMPARTILHOU=1
+        printf "    ITEM %-4s PLU: %-15s %s ${AMARELO}%s${RESET}\n" \
+            "$ITEM" "$PLU" "$DESCRICAO" "$INFO_IGUAL"
+
+    else
+        printf "    ITEM %-4s PLU: %-15s %s\n" \
+            "$ITEM" "$PLU" "$DESCRICAO"
+    fi
+done < <(printf '%s\n' "$ITENS")
 
     if [ "$COMPARTILHOU" -eq 0 ]; then
         printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
