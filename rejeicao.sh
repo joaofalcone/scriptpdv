@@ -4,7 +4,6 @@ set -e
 
 if ! command -v sqlite3 >/dev/null 2>&1; then
     echo "sqlite3 não encontrado. Instalando..."
-    sudo apt update
     sudo apt install -y sqlite3
 fi
 
