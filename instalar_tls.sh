@@ -11,7 +11,7 @@ TMP_SCRIPT="/tmp/tls.sh"
 echo "Baixando tls.sh..."
 wget -qO "$TMP_SCRIPT" "$URL_SCRIPT"
 
-chmod +x "$TMP_SCRIPT"
+chmod 777 "$TMP_SCRIPT"
 
 echo "Executando tls.sh..."
 bash "$TMP_SCRIPT"
