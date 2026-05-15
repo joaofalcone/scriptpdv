@@ -142,7 +142,7 @@ do
 
     INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
 
-    if [ "$ITEM" = "$ITEM_ERRO" ]; then
+    if [ -n "$ITEM" = "$ITEM_ERRO" ]; then
         printf "${VERMELHO}ITEM %-4s PLU: %-15s %s${RESET}\n" \
         "$ITEM" "$PLU" "$DESCRICAO"
 
