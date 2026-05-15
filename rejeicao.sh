@@ -16,6 +16,7 @@ DB="${1:-/opt/checkout/pdv_out.db}"
 LARANJA='\033[1;38;5;208m'
 AMARELO='\033[1;33m'
 AZUL='\033[1;34m'
+VERMELHO='\033[1;31m'
 RESET='\033[0m'
 
 if [ ! -f "$DB" ]; then
@@ -46,8 +47,8 @@ ORDER BY id DESC;
 do
     echo "=============================================================="
 
-    printf "${LARANJA}CUPOM: %s${RESET}\n" "$NUM"
-    printf "${LARANJA}REJEIÇÃO:${RESET} %s\n" "$REJEICAO"
+    printf "CUPOM: ${LARANJA}%s${RESET}\n" "$NUM"
+    printf "${VERMELHO}REJEIÇÃO: %s${RESET}\n" "$REJEICAO"
     echo
 
     if ! echo "$NUM" | grep -Eq '^[0-9]+$'; then
@@ -157,14 +158,14 @@ done < <(printf '%s\n' "$ITENS")
         printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
     fi
 
-    printf "\n${LARANJA}Dados do item com erro:${RESET}\n"
-    printf "${LARANJA}- ncm: %s${RESET}\n" "$NCM_ERRO"
-    printf "${LARANJA}- classificacao_tributaria: %s${RESET}\n" "$CLASS_ERRO"
-    printf "${LARANJA}- ibs_reducao: %s${RESET}\n" "$IBS_RED_ERRO"
-    printf "${LARANJA}- aliquota_ibs_uf: %s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
-    printf "${LARANJA}- cfop: %s${RESET}\n" "$CFOP_ERRO"
-    printf "${LARANJA}- cst: %s${RESET}\n" "$CST_ERRO"
-    printf "${LARANJA}- codigo_beneficio: %s${RESET}\n" "$COD_BENEFICIO_ERRO"
+    printf "\nDados do item com erro:\n"
+    printf "- ncm: ${LARANJA}%s${RESET}\n" "$NCM_ERRO"
+    printf "- classificacao_tributaria: ${LARANJA}%s${RESET}\n" "$CLASS_ERRO"
+    printf "- ibs_reducao: ${LARANJA}%s${RESET}\n" "$IBS_RED_ERRO"
+    printf "- aliquota_ibs_uf: ${LARANJA}%s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
+    printf "- cfop: ${LARANJA}%s${RESET}\n" "$CFOP_ERRO"
+    printf "- cst: ${LARANJA}%s${RESET}\n" "$CST_ERRO"
+    printf "- codigo_beneficio: ${LARANJA}%s${RESET}\n" "$COD_BENEFICIO_ERRO"
 
     echo
 done
