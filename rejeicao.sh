@@ -120,39 +120,33 @@ do
     COMPARTILHOU=0
 
     while IFS='|' read -r ITEM PLU NCM CLASS IBS_RED ALIQ_IBS_UF DESCRICAO
-    do
-        INFO_IGUAL=""
+do
+    INFO_IGUAL=""
 
-        if [ "$ITEM" != "$ITEM_ERRO" ]; then
-            [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
-            [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
-            [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
-            [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
-        fi
-
-        INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
-
-        if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s${RESET}\n" \
-                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
-
-        elif [ -n "$INFO_IGUAL" ]; then
-            COMPARTILHOU=1
-            printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s <<< CAMPOS IGUAIS AO ITEM COM ERRO: (${AMARELO}%s${RESET}) REVISAR\n" \
-                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO" "$INFO_IGUAL"
-
-        else
-            printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s\n" \
-                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
-        fi
-    done < <(printf '%s\n' "$ITENS")
-
-    if [ "$COMPARTILHOU" -eq 0 ]; then
-        printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
+    if [ "$ITEM" != "$ITEM_ERRO" ]; then
+        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
+        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
+        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
+        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
     fi
 
-    echo
-done
+    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
+
+    if [ "$ITEM" = "$ITEM_ERRO" ]; then
+        printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
+            "$ITEM" "$PLU" "$DESCRICAO"
+
+    elif [ -n "$INFO_IGUAL" ]; then
+        COMPARTILHOU=1
+        printf "    ITEM %-4s PLU: %-15s %s ${AMARELO}%s${RESET}\n" \
+            "$ITEM" "$PLU" "$DESCRICAO" "$INFO_IGUAL"
+
+    else
+        printf "    ITEM %-4s PLU: %-15s %s\n" \
+            "$ITEM" "$PLU" "$DESCRICAO"
+    fi
+done < <(printf '%s\n' "$ITENS")
+
 EOF
 
 sudo chmod +x /usr/local/bin/rejeicao
