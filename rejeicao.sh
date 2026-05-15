@@ -144,7 +144,7 @@ do
 
     if [ "$ITEM" = "$ITEM_ERRO" ]; then
         printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s${RESET}\n" \
-            "$ITEM" "$PLU" "$DESCRICAO"
+        "$ITEM" "$PLU" "$DESCRICAO"
 
     elif [ -n "$INFO_IGUAL" ]; then
         COMPARTILHOU=1
@@ -162,13 +162,13 @@ done < <(printf '%s\n' "$ITENS")
     fi
 
     printf "\nDados do item com erro:\n"
-    printf -- "- ncm: ${LARANJA}%s${RESET}\n" "$NCM_ERRO"
-    printf -- "- classificacao_tributaria: ${LARANJA}%s${RESET}\n" "$CLASS_ERRO"
-    printf -- "- ibs_reducao: ${LARANJA}%s${RESET}\n" "$IBS_RED_ERRO"
-    printf -- "- aliquota_ibs_uf: ${LARANJA}%s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
-    printf -- "- cfop: ${LARANJA}%s${RESET}\n" "$CFOP_ERRO"
-    printf -- "- cst: ${LARANJA}%s${RESET}\n" "$CST_ERRO"
-    printf -- "- codigo_beneficio: ${LARANJA}%s${RESET}\n" "$COD_BENEFICIO_ERRO"
+    printf -- "- ${LARANJA}ncm:${RESET} %s\n" "$NCM_ERRO"
+    printf -- "- ${LARANJA}classificacao_tributaria:${RESET} %s\n" "$CLASS_ERRO"
+    printf -- "- ${LARANJA}ibs_reducao:${RESET} %s\n" "$IBS_RED_ERRO"
+    printf -- "- ${LARANJA}aliquota_ibs_uf:${RESET} %s\n" "$ALIQ_IBS_UF_ERRO"
+    printf -- "- ${LARANJA}cfop:${RESET} %s\n" "$CFOP_ERRO"
+    printf -- "- ${LARANJA}cst:${RESET} %s\n" "$CST_ERRO"
+    printf -- "- ${LARANJA}codigo_beneficio:${RESET} %s\n" "$COD_BENEFICIO_ERRO"
 
     echo
 done
