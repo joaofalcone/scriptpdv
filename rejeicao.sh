@@ -126,13 +126,7 @@ do
     do
         INFO_IGUAL=""
 
-        if [ "$ITEM" != "$ITEM_ERRO" ]; then
-            [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
-            [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
-            [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
-            [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
-        fi
-
+        if [ "$ITEM" != "$ITEM_ERRO"
         INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
 
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
@@ -154,7 +148,7 @@ do
         printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
     fi
 
-    printf "\n${LARANJA}Dados tributáveis do item com erro:${RESET}\n"
+    printf "\n${LARANJA}Dados do item com erro:${RESET}\n"
     printf "${LARANJA}- ncm: %s${RESET}\n" "$NCM_ERRO"
     printf "${LARANJA}- classificacao_tributaria: %s${RESET}\n" "$CLASS_ERRO"
     printf "${LARANJA}- ibs_reducao: %s${RESET}\n" "$IBS_RED_ERRO"
