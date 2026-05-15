@@ -162,13 +162,13 @@ done < <(printf '%s\n' "$ITENS")
     fi
 
     printf "\nDados do item com erro:\n"
-    printf "- ncm: ${LARANJA}%s${RESET}\n" "$NCM_ERRO"
-    printf "- classificacao_tributaria: ${LARANJA}%s${RESET}\n" "$CLASS_ERRO"
-    printf "- ibs_reducao: ${LARANJA}%s${RESET}\n" "$IBS_RED_ERRO"
-    printf "- aliquota_ibs_uf: ${LARANJA}%s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
-    printf "- cfop: ${LARANJA}%s${RESET}\n" "$CFOP_ERRO"
-    printf "- cst: ${LARANJA}%s${RESET}\n" "$CST_ERRO"
-    printf "- codigo_beneficio: ${LARANJA}%s${RESET}\n" "$COD_BENEFICIO_ERRO"
+    printf -- "- ncm: ${LARANJA}%s${RESET}\n" "$NCM_ERRO"
+    printf -- "- classificacao_tributaria: ${LARANJA}%s${RESET}\n" "$CLASS_ERRO"
+    printf -- "- ibs_reducao: ${LARANJA}%s${RESET}\n" "$IBS_RED_ERRO"
+    printf -- "- aliquota_ibs_uf: ${LARANJA}%s${RESET}\n" "$ALIQ_IBS_UF_ERRO"
+    printf -- "- cfop: ${LARANJA}%s${RESET}\n" "$CFOP_ERRO"
+    printf -- "- cst: ${LARANJA}%s${RESET}\n" "$CST_ERRO"
+    printf -- "- codigo_beneficio: ${LARANJA}%s${RESET}\n" "$COD_BENEFICIO_ERRO"
 
     echo
 done
