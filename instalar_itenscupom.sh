@@ -1,5 +1,3 @@
-#!/bin/bash
-
 sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 #!/bin/bash
 
@@ -21,43 +19,37 @@ do
     echo "REJEIÇÃO: $REJEICAO"
     echo
 
-    # Extrai o número do item no padrão 'nItem: X'
     ITEM_ERRO=$(echo "$REJEICAO" | grep -o 'nItem: [0-9]\+' | awk '{print $2}')
 
-    # Busca o ID interno do cupom
     ID=$(sqlite3 "$DB" "SELECT id FROM cupom WHERE numero = '$NUM' LIMIT 1;")
 
-    # Se não encontrar o cupom, mostra apenas a rejeição
     if [ -z "$ID" ]; then
         echo "Cupom não encontrado na tabela cupom."
         echo
         continue
     fi
 
-    # Se não houver item específico na mensagem
     if [ -z "$ITEM_ERRO" ]; then
         echo "Nenhum item específico informado na rejeição."
         echo
         continue
     fi
 
-    # Lista os itens do cupom e destaca o item com erro
     sqlite3 -separator '|' "$DB" "
     SELECT
-        ci.sequencia,
-        IFNULL(p.descricao, '[SEM DESCRIÇÃO]'),
-        ci.codigo_interno
-    FROM cupom_item ci
-    LEFT JOIN produto p
-        ON p.codigo_interno = ci.codigo_interno
-    WHERE ci.id_cupom = $ID
-    ORDER BY ci.sequencia;
-    " | while IFS='|' read -r ITEM DESC CODIGO
+        sequencia,
+        codigo_interno,
+        codigo_plu_barras,
+        codigo_plu_barras_lido
+    FROM cupom_item
+    WHERE id_cupom = $ID
+    ORDER BY sequencia;
+    " | while IFS='|' read -r ITEM CODIGO PLU PLU_LIDO
     do
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            printf ">>> %-4s %-50s %s  <<< ITEM COM ERRO\n" "$ITEM" "$DESC" "$CODIGO"
+            printf ">>> ITEM %-4s CODIGO: %-10s PLU: %-15s PLU_LIDO: %-20s <<< ITEM COM ERRO\n" "$ITEM" "$CODIGO" "$PLU" "$PLU_LIDO"
         else
-            printf "    %-4s %-50s %s\n" "$ITEM" "$DESC" "$CODIGO"
+            printf "    ITEM %-4s CODIGO: %-10s PLU: %-15s PLU_LIDO: %-20s\n" "$ITEM" "$CODIGO" "$PLU" "$PLU_LIDO"
         fi
     done
 
@@ -66,6 +58,3 @@ done
 EOF
 
 sudo chmod +x /usr/local/bin/rejeicao
-
-echo "Instalado com sucesso."
-echo "Use o comando: rejeicao"
