@@ -2,7 +2,6 @@
 
 set -e
 
-# Instala sqlite3 se não existir
 if ! command -v sqlite3 >/dev/null 2>&1; then
     echo "sqlite3 não encontrado. Instalando..."
     sudo apt update
@@ -15,6 +14,7 @@ sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 DB="${1:-/opt/checkout/pdv_out.db}"
 
 LARANJA='\033[1;38;5;208m'
+AZUL='\033[1;34m'
 RESET='\033[0m'
 
 if [ ! -f "$DB" ]; then
@@ -44,9 +44,16 @@ ORDER BY id DESC;
 " | while IFS='|' read -r ID_REJEICAO NUM REJEICAO
 do
     echo "=============================================================="
+
     printf "${LARANJA}CUPOM: %s${RESET}\n" "$NUM"
     printf "${LARANJA}REJEIÇÃO:${RESET} %s\n" "$REJEICAO"
     echo
+
+    if ! echo "$NUM" | grep -Eq '^[0-9]+$'; then
+        echo "Cupom inválido na tabela de rejeição: $NUM"
+        echo
+        continue
+    fi
 
     ITEM_ERRO=$(echo "$REJEICAO" | sed -n 's/.*nItem:[[:space:]]*\([0-9]\+\).*/\1/p')
 
@@ -69,10 +76,19 @@ do
         continue
     fi
 
+    NCM_ERRO=$(sqlite3 "$DB" "
+        SELECT IFNULL(ncm, '')
+        FROM cupom_item
+        WHERE id_cupom = $ID_CUPOM
+          AND sequencia = $ITEM_ERRO
+        LIMIT 1;
+    ")
+
     ITENS=$(sqlite3 -separator '|' "$DB" "
         SELECT
             sequencia,
             IFNULL(codigo_plu_barras, ''),
+            IFNULL(ncm, ''),
             IFNULL(descricao, '[SEM DESCRIÇÃO]')
         FROM cupom_item
         WHERE id_cupom = $ID_CUPOM
@@ -85,14 +101,19 @@ do
         continue
     fi
 
-    echo "$ITENS" | while IFS='|' read -r ITEM PLU DESCRICAO
+    echo "$ITENS" | while IFS='|' read -r ITEM PLU NCM DESCRICAO
     do
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s <<< ITEM COM ERRO${RESET}\n" \
-                "$ITEM" "$PLU" "$DESCRICAO"
+            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s NCM: %-10s %s <<< ITEM COM ERRO${RESET}\n" \
+                "$ITEM" "$PLU" "$NCM" "$DESCRICAO"
+
+        elif [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ]; then
+            printf "${AZUL}    ITEM %-4s PLU: %-15s NCM: %-10s %s <<< MESMO NCM DO ITEM COM ERRO${RESET}\n" \
+                "$ITEM" "$PLU" "$NCM" "$DESCRICAO"
+
         else
-            printf "    ITEM %-4s PLU: %-15s %s\n" \
-                "$ITEM" "$PLU" "$DESCRICAO"
+            printf "    ITEM %-4s PLU: %-15s NCM: %-10s %s\n" \
+                "$ITEM" "$PLU" "$NCM" "$DESCRICAO"
         fi
     done
 
