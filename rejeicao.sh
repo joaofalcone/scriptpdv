@@ -102,17 +102,20 @@ do
     IFS='|' read -r NCM_ERRO CLASS_ERRO IBS_RED_ERRO ALIQ_IBS_UF_ERRO CFOP_ERRO CST_ERRO COD_BENEFICIO_ERRO <<< "$DADOS_ERRO"
 
     ITENS=$(sqlite3 -separator '|' "$DB" "
-        SELECT
-            sequencia,
-            IFNULL(codigo_plu_barras, ''),
-            IFNULL(ncm, ''),
-            IFNULL(classificacao_tributaria, ''),
-            IFNULL(ibs_reducao, ''),
-            IFNULL(aliquota_ibs_uf, ''),
-            IFNULL(descricao, '[SEM DESCRIÇÃO]')
-        FROM cupom_item
-        WHERE id_cupom = $ID_CUPOM
-        ORDER BY sequencia;
+    SELECT
+        sequencia,
+        IFNULL(codigo_plu_barras, ''),
+        IFNULL(ncm, ''),
+        IFNULL(classificacao_tributaria, ''),
+        IFNULL(ibs_reducao, ''),
+        IFNULL(aliquota_ibs_uf, ''),
+        IFNULL(cfop, ''),
+        IFNULL(cst, ''),
+        IFNULL(codigo_beneficio, ''),
+        IFNULL(descricao, '[SEM DESCRIÇÃO]')
+    FROM cupom_item
+    WHERE id_cupom = $ID_CUPOM
+    ORDER BY sequencia;
     ")
 
     if [ -z "$ITENS" ]; then
