@@ -8,6 +8,10 @@ sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 
 DB="/opt/checkout/pdv_out.db"
 
+# Laranja (ANSI 256-color, código 208) + negrito
+LARANJA='\033[1;38;5;208m'
+RESET='\033[0m'
+
 if [ ! -f "$DB" ]; then
     echo "Banco não encontrado: $DB"
     exit 1
@@ -20,7 +24,10 @@ ORDER BY id DESC;
 " | while IFS='|' read -r NUM REJEICAO
 do
     echo "=============================================================="
-    echo "CUPOM: $NUM"
+
+    # Número do cupom em laranja e negrito
+    printf "CUPOM: ${LARANJA}%s${RESET}\n" "$NUM"
+
     echo "REJEIÇÃO: $REJEICAO"
     echo
 
@@ -44,7 +51,7 @@ do
         continue
     fi
 
-    # Lista os itens do cupom e destaca em amarelo o item com erro
+    # Lista os itens do cupom e destaca em laranja o item com erro
     sqlite3 -separator '|' "$DB" "
     SELECT
         sequencia,
@@ -56,11 +63,11 @@ do
     " | while IFS='|' read -r ITEM PLU DESCRICAO
     do
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
-            # Fundo amarelo + texto preto + negrito
-            printf '\033[1;30;43m>>> ITEM %-4s PLU: %-15s %s <<< ITEM COM ERRO\033[0m\n' \
+            # Texto laranja + negrito (sem alterar o fundo)
+            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s <<< ITEM COM ERRO${RESET}\n" \
                 "$ITEM" "$PLU" "$DESCRICAO"
         else
-            printf '    ITEM %-4s PLU: %-15s %s\n' \
+            printf "    ITEM %-4s PLU: %-15s %s\n" \
                 "$ITEM" "$PLU" "$DESCRICAO"
         fi
     done
