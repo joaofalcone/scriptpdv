@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# Garante que o sqlite3 esteja instalado
+sudo apt install -y sqlite3
+
 sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 #!/bin/bash
 
