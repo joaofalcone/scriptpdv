@@ -2,7 +2,6 @@
 
 set -e
 
-# Instala sqlite3 apenas se necessário
 if ! command -v sqlite3 >/dev/null 2>&1; then
     echo "sqlite3 não encontrado. Instalando..."
     sudo apt update
@@ -14,7 +13,6 @@ sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 
 DB="${1:-/opt/checkout/pdv_out.db}"
 
-# Cores
 LARANJA='\033[1;38;5;208m'
 AMARELO='\033[1;33m'
 AZUL='\033[1;34m'
@@ -25,7 +23,6 @@ if [ ! -f "$DB" ]; then
     exit 1
 fi
 
-# Verifica se as tabelas existem
 for TABELA in recibo_rejeicao_nfce cupom cupom_item; do
     EXISTE=$(sqlite3 "$DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='$TABELA';")
     if [ -z "$EXISTE" ]; then
@@ -34,14 +31,13 @@ for TABELA in recibo_rejeicao_nfce cupom cupom_item; do
     fi
 done
 
-# Verifica se há rejeições
 TOTAL=$(sqlite3 "$DB" "SELECT COUNT(*) FROM recibo_rejeicao_nfce;")
+
 if [ "$TOTAL" -eq 0 ]; then
     echo "Nenhuma rejeição encontrada."
     exit 0
 fi
 
-# Processa cada rejeição
 sqlite3 -separator '|' "$DB" "
 SELECT id, cupom_contingencia, descricao_rejeicao
 FROM recibo_rejeicao_nfce
@@ -54,17 +50,14 @@ do
     printf "${LARANJA}REJEIÇÃO:${RESET} %s\n" "$REJEICAO"
     echo
 
-    # Valida se o número do cupom é numérico
     if ! echo "$NUM" | grep -Eq '^[0-9]+$'; then
         echo "Cupom inválido na tabela de rejeição: $NUM"
         echo
         continue
     fi
 
-    # Extrai nItem da rejeição
     ITEM_ERRO=$(echo "$REJEICAO" | sed -n 's/.*nItem:[[:space:]]*\([0-9]\+\).*/\1/p')
 
-    # Localiza o ID do cupom
     ID_CUPOM=$(sqlite3 "$DB" "
         SELECT id
         FROM cupom
@@ -78,14 +71,12 @@ do
         continue
     fi
 
-    # Se não houver item específico
     if [ -z "$ITEM_ERRO" ]; then
         echo "Nenhum item específico informado na rejeição."
         echo
         continue
     fi
 
-    # Obtém os campos tributários do item com erro
     DADOS_ERRO=$(sqlite3 -separator '|' "$DB" "
         SELECT
             IFNULL(ncm, ''),
@@ -106,7 +97,6 @@ do
 
     IFS='|' read -r NCM_ERRO CLASS_ERRO IBS_RED_ERRO ALIQ_IBS_UF_ERRO <<< "$DADOS_ERRO"
 
-    # Obtém todos os itens do cupom
     ITENS=$(sqlite3 -separator '|' "$DB" "
         SELECT
             sequencia,
@@ -129,34 +119,40 @@ do
 
     COMPARTILHOU=0
 
-    # Process substitution preserva COMPARTILHOU após o loop
     while IFS='|' read -r ITEM PLU NCM CLASS IBS_RED ALIQ_IBS_UF DESCRICAO
-do
-    INFO_IGUAL=""
+    do
+        INFO_IGUAL=""
 
-    if [ "$ITEM" != "$ITEM_ERRO" ]; then
-        [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
-        [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
-        [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
-        [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
+        if [ "$ITEM" != "$ITEM_ERRO" ]; then
+            [ -n "$NCM_ERRO" ] && [ "$NCM" = "$NCM_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ncm "
+            [ -n "$CLASS_ERRO" ] && [ "$CLASS" = "$CLASS_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| classificacao_tributaria "
+            [ -n "$IBS_RED_ERRO" ] && [ "$IBS_RED" = "$IBS_RED_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| ibs_reducao "
+            [ -n "$ALIQ_IBS_UF_ERRO" ] && [ "$ALIQ_IBS_UF" = "$ALIQ_IBS_UF_ERRO" ] && INFO_IGUAL="${INFO_IGUAL}| aliquota_ibs_uf "
+        fi
+
+        INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
+
+        if [ "$ITEM" = "$ITEM_ERRO" ]; then
+            printf "${LARANJA}>>> ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s${RESET}\n" \
+                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
+
+        elif [ -n "$INFO_IGUAL" ]; then
+            COMPARTILHOU=1
+            printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s <<< CAMPOS IGUAIS AO ITEM COM ERRO: (${AMARELO}%s${RESET}) REVISAR\n" \
+                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO" "$INFO_IGUAL"
+
+        else
+            printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s\n" \
+                "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
+        fi
+    done < <(printf '%s\n' "$ITENS")
+
+    if [ "$COMPARTILHOU" -eq 0 ]; then
+        printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
     fi
 
-    INFO_IGUAL=$(echo "$INFO_IGUAL" | sed 's/^| //; s/[[:space:]]*$//')
-
-    if [ "$ITEM" = "$ITEM_ERRO" ]; then
-        printf "${LARANJA}>>> ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s${RESET}\n" \
-            "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
-
-    elif [ -n "$INFO_IGUAL" ]; then
-        COMPARTILHOU=1
-        printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s <<< CAMPOS IGUAIS AO ITEM COM ERRO: (${AMARELO}%s${RESET}) REVISAR\n" \
-            "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO" "$INFO_IGUAL"
-
-    else
-        printf "    ITEM %-4s PLU: %-15s NCM: %-10s CLASS: %-10s IBS_RED: %-8s ALIQ_IBS_UF: %-8s %s\n" \
-            "$ITEM" "$PLU" "$NCM" "$CLASS" "$IBS_RED" "$ALIQ_IBS_UF" "$DESCRICAO"
-    fi
-done < <(printf '%s\n' "$ITENS")
+    echo
+done
 EOF
 
 sudo chmod +x /usr/local/bin/rejeicao
