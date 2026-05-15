@@ -1,14 +1,19 @@
 #!/bin/bash
 
-# Garante que o sqlite3 esteja instalado
-sudo apt install -y sqlite3
+set -e
+
+# Instala sqlite3 se não existir
+if ! command -v sqlite3 >/dev/null 2>&1; then
+    echo "sqlite3 não encontrado. Instalando..."
+    sudo apt update
+    sudo apt install -y sqlite3
+fi
 
 sudo tee /usr/local/bin/rejeicao > /dev/null <<'EOF'
 #!/bin/bash
 
-DB="/opt/checkout/pdv_out.db"
+DB="${1:-/opt/checkout/pdv_out.db}"
 
-# Laranja na fonte + negrito, sem alterar fundo
 LARANJA='\033[1;38;5;208m'
 RESET='\033[0m'
 
@@ -17,23 +22,42 @@ if [ ! -f "$DB" ]; then
     exit 1
 fi
 
+for TABELA in recibo_rejeicao_nfce cupom cupom_item; do
+    EXISTE=$(sqlite3 "$DB" "SELECT name FROM sqlite_master WHERE type='table' AND name='$TABELA';")
+    if [ -z "$EXISTE" ]; then
+        echo "Tabela não encontrada: $TABELA"
+        exit 1
+    fi
+done
+
+TOTAL=$(sqlite3 "$DB" "SELECT COUNT(*) FROM recibo_rejeicao_nfce;")
+
+if [ "$TOTAL" -eq 0 ]; then
+    echo "Nenhuma rejeição encontrada."
+    exit 0
+fi
+
 sqlite3 -separator '|' "$DB" "
-SELECT cupom_contingencia, descricao_rejeicao
+SELECT id, cupom_contingencia, descricao_rejeicao
 FROM recibo_rejeicao_nfce
 ORDER BY id DESC;
-" | while IFS='|' read -r NUM REJEICAO
+" | while IFS='|' read -r ID_REJEICAO NUM REJEICAO
 do
     echo "=============================================================="
-
     printf "${LARANJA}CUPOM: %s${RESET}\n" "$NUM"
     printf "${LARANJA}REJEIÇÃO:${RESET} %s\n" "$REJEICAO"
     echo
 
-    ITEM_ERRO=$(echo "$REJEICAO" | grep -o 'nItem: [0-9]\+' | awk '{print $2}')
+    ITEM_ERRO=$(echo "$REJEICAO" | sed -n 's/.*nItem:[[:space:]]*\([0-9]\+\).*/\1/p')
 
-    ID=$(sqlite3 "$DB" "SELECT id FROM cupom WHERE numero = '$NUM' LIMIT 1;")
+    ID_CUPOM=$(sqlite3 "$DB" "
+        SELECT id
+        FROM cupom
+        WHERE numero = '$NUM'
+        LIMIT 1;
+    ")
 
-    if [ -z "$ID" ]; then
+    if [ -z "$ID_CUPOM" ]; then
         echo "Cupom não encontrado na tabela cupom."
         echo
         continue
@@ -45,15 +69,23 @@ do
         continue
     fi
 
-    sqlite3 -separator '|' "$DB" "
-    SELECT
-        sequencia,
-        codigo_plu_barras,
-        descricao
-    FROM cupom_item
-    WHERE id_cupom = $ID
-    ORDER BY sequencia;
-    " | while IFS='|' read -r ITEM PLU DESCRICAO
+    ITENS=$(sqlite3 -separator '|' "$DB" "
+        SELECT
+            sequencia,
+            IFNULL(codigo_plu_barras, ''),
+            IFNULL(descricao, '[SEM DESCRIÇÃO]')
+        FROM cupom_item
+        WHERE id_cupom = $ID_CUPOM
+        ORDER BY sequencia;
+    ")
+
+    if [ -z "$ITENS" ]; then
+        echo "Nenhum item encontrado para este cupom."
+        echo
+        continue
+    fi
+
+    echo "$ITENS" | while IFS='|' read -r ITEM PLU DESCRICAO
     do
         if [ "$ITEM" = "$ITEM_ERRO" ]; then
             printf "${LARANJA}>>> ITEM %-4s PLU: %-15s %s <<< ITEM COM ERRO${RESET}\n" \
