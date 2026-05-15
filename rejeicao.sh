@@ -147,6 +147,12 @@ do
     fi
 done < <(printf '%s\n' "$ITENS")
 
+    if [ "$COMPARTILHOU" -eq 0 ]; then
+        printf "${AZUL}Nenhum outro item compartilha essas informações com o item com erro.${RESET}\n"
+    fi
+
+    echo
+done
 EOF
 
 sudo chmod +x /usr/local/bin/rejeicao
