@@ -16,4 +16,4 @@ else {
     Start-Service -Name $serviceName
 }
 
-Write-Host 'Operação concluída com sucesso.' -ForegroundColor Green
+Write-Host 'Solicitação bem sucedida' -ForegroundColor Green
