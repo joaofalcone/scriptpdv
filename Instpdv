@@ -1,0 +1,276 @@
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+$Pasta = "C:\Users\João Falcone\Desktop\Driver"
+
+function Selecionar-OpcaoPrincipal {
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Instalador"
+    $form.Size = New-Object System.Drawing.Size(300,170)
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = "FixedDialog"
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+
+    $combo = New-Object System.Windows.Forms.ComboBox
+    $combo.Location = New-Object System.Drawing.Point(20,20)
+    $combo.Size = New-Object System.Drawing.Size(240,25)
+    $combo.DropDownStyle = "DropDownList"
+    $combo.Items.AddRange(@("Borland", "PDV", "PinPad"))
+    $combo.SelectedIndex = 0
+    $form.Controls.Add($combo)
+
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "Avançar"
+    $btnOK.Location = New-Object System.Drawing.Point(55,70)
+    $btnOK.Add_Click({
+        $form.Tag = $combo.SelectedItem
+        $form.Close()
+    })
+    $form.Controls.Add($btnOK)
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancelar"
+    $btnCancel.Location = New-Object System.Drawing.Point(155,70)
+    $btnCancel.Add_Click({
+        $form.Tag = $null
+        $form.Close()
+    })
+    $form.Controls.Add($btnCancel)
+
+    $form.ShowDialog() | Out-Null
+    return $form.Tag
+}
+
+function Mostrar-Mensagem {
+    param(
+        [string]$Texto,
+        [string]$Titulo = "Instalador"
+    )
+
+    [System.Windows.Forms.MessageBox]::Show(
+        $Texto,
+        $Titulo,
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Information
+    ) | Out-Null
+}
+
+function Mostrar-Erro {
+    param(
+        [string]$Texto,
+        [string]$Titulo = "Instalador"
+    )
+
+    [System.Windows.Forms.MessageBox]::Show(
+        $Texto,
+        $Titulo,
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error
+    ) | Out-Null
+}
+
+function Selecionar-PinPad {
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Selecionar PinPad"
+    $form.Size = New-Object System.Drawing.Size(320,150)
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = "FixedDialog"
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+
+    $combo = New-Object System.Windows.Forms.ComboBox
+    $combo.Location = New-Object System.Drawing.Point(20,20)
+    $combo.Size = New-Object System.Drawing.Size(260,25)
+    $combo.DropDownStyle = "DropDownList"
+    $combo.Items.AddRange(@("Gertec", "Ingenico", "Verifone"))
+    $combo.SelectedIndex = 0
+    $form.Controls.Add($combo)
+
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "Instalar"
+    $btnOK.Location = New-Object System.Drawing.Point(65,65)
+    $btnOK.Add_Click({
+        $form.Tag = $combo.SelectedItem
+        $form.Close()
+    })
+    $form.Controls.Add($btnOK)
+
+    $btnCancel = New-Object System.Windows.Forms.Button
+    $btnCancel.Text = "Cancelar"
+    $btnCancel.Location = New-Object System.Drawing.Point(170,65)
+    $btnCancel.Add_Click({
+        $form.Tag = $null
+        $form.Close()
+    })
+    $form.Controls.Add($btnCancel)
+
+    $form.ShowDialog() | Out-Null
+    return $form.Tag
+}
+
+function Executar-ComJanela {
+    param(
+        [string]$Titulo,
+        [scriptblock]$Acao
+    )
+
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = $Titulo
+    $form.Size = New-Object System.Drawing.Size(360,130)
+    $form.StartPosition = "CenterScreen"
+    $form.FormBorderStyle = "FixedDialog"
+    $form.MaximizeBox = $false
+    $form.MinimizeBox = $false
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = "Processando, aguarde..."
+    $label.AutoSize = $true
+    $label.Location = New-Object System.Drawing.Point(20,20)
+    $form.Controls.Add($label)
+
+    $progress = New-Object System.Windows.Forms.ProgressBar
+    $progress.Location = New-Object System.Drawing.Point(20,50)
+    $progress.Size = New-Object System.Drawing.Size(300,22)
+    $progress.Style = "Marquee"
+    $progress.MarqueeAnimationSpeed = 30
+    $form.Controls.Add($progress)
+
+    $timer = New-Object System.Windows.Forms.Timer
+    $timer.Interval = 300
+    $timer.Add_Tick({
+        $timer.Stop()
+
+        try {
+            & $Acao
+            $progress.Style = "Blocks"
+            $progress.Value = 100
+            $label.Text = "Concluído com sucesso."
+            Start-Sleep -Seconds 1
+            $form.Close()
+        }
+        catch {
+            $progress.Style = "Blocks"
+            $progress.Value = 100
+            $label.Text = "Falha na operação."
+            [System.Windows.Forms.MessageBox]::Show(
+                $_.Exception.Message,
+                "Erro",
+                [System.Windows.Forms.MessageBoxButtons]::OK,
+                [System.Windows.Forms.MessageBoxIcon]::Error
+            ) | Out-Null
+            $form.Close()
+        }
+    })
+
+    $form.Add_Shown({ $timer.Start() })
+    $form.ShowDialog() | Out-Null
+}
+
+function Instalar-Processo {
+    param (
+        [string]$Nome,
+        [string]$Executavel,
+        [string]$Argumentos
+    )
+
+    Executar-ComJanela $Nome {
+        if (-not (Test-Path $Executavel) -and $Executavel -ne "msiexec.exe") {
+            throw "Arquivo não encontrado: $Executavel"
+        }
+
+        if ($Executavel -ne "msiexec.exe") {
+            Unblock-File $Executavel -ErrorAction SilentlyContinue
+        }
+
+        $processo = Start-Process `
+            -FilePath $Executavel `
+            -ArgumentList $Argumentos `
+            -Wait `
+            -PassThru
+
+        if (-not $processo -or $processo.ExitCode -ne 0) {
+            throw "$Nome terminou com código: $($processo.ExitCode)"
+        }
+    }
+}
+
+# Substitua todo o trecho final:
+# $opcao = Selecionar-OpcaoPrincipal
+# ...
+# switch ($opcao) { ... }
+
+while ($true) {
+    $opcao = Selecionar-OpcaoPrincipal
+
+    if (-not $opcao) {
+        break
+    }
+
+    switch ($opcao) {
+        "Borland" {
+    Executar-ComJanela "Borland" {
+        $zip = Join-Path $Pasta "Borland Shared.zip"
+        $destino = "C:\Program Files (x86)\Common Files"
+
+        if (-not (Test-Path $zip)) {
+            throw "Arquivo não encontrado: $zip"
+        }
+
+        Unblock-File $zip -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Path $destino -Force | Out-Null
+        Expand-Archive -Path $zip -DestinationPath $destino -Force
+
+        if (-not (Test-Path "C:\Program Files (x86)\Common Files\Borland Shared")) {
+            throw "Falha ao extrair Borland Shared."
+        }
+    }
+}
+
+        "PDV" {
+    try {
+        $arquivo = Join-Path $Pasta "kiodai_instpdv_160517_auto.exe"
+
+        Unblock-File $arquivo -ErrorAction SilentlyContinue
+        Start-Process -FilePath $arquivo -Wait | Out-Null
+
+        Start-Sleep -Seconds 3
+        Get-Process CONFIG, Checkout -ErrorAction SilentlyContinue | Stop-Process -Force
+
+        Mostrar-Mensagem "PDV instalado com sucesso."
+    }
+    catch {
+        Mostrar-Erro $_.Exception.Message
+    }
+}
+
+        "PinPad" {
+            $modelo = Selecionar-PinPad
+
+            if (-not $modelo) {
+                continue
+            }
+
+            switch ($modelo) {
+                "Gertec" {
+                    Instalar-Processo "Driver Gertec" (Join-Path $Pasta "gertec.exe") "/S"
+                }
+
+                "Ingenico" {
+                    Instalar-Processo "Driver Ingenico" (Join-Path $Pasta "ingenico.exe") "/S"
+                }
+
+                "Verifone" {
+                    if ([Environment]::Is64BitOperatingSystem) {
+                        $arquivo = Join-Path $Pasta "verifone64.msi"
+                    }
+                    else {
+                        $arquivo = Join-Path $Pasta "verifone32.msi"
+                    }
+
+                    Instalar-Processo "Driver Verifone" "msiexec.exe" "/i `"$arquivo`" /qn /norestart"
+                }
+            }
+        }
+    }
+}
