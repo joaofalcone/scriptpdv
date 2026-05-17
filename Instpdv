@@ -136,6 +136,14 @@ function Executar-ComJanela {
     $progress.MarqueeAnimationSpeed = 30
     $form.Controls.Add($progress)
 
+    $btnOK = New-Object System.Windows.Forms.Button
+    $btnOK.Text = "OK"
+    $btnOK.Size = New-Object System.Drawing.Size(80,30)
+    $btnOK.Location = New-Object System.Drawing.Point(130,80)
+    $btnOK.Visible = $false
+    $btnOK.Add_Click({ $form.Close() })
+    $form.Controls.Add($btnOK)
+
     $timer = New-Object System.Windows.Forms.Timer
     $timer.Interval = 300
     $timer.Add_Tick({
@@ -146,8 +154,9 @@ function Executar-ComJanela {
             $progress.Style = "Blocks"
             $progress.Value = 100
             $label.Text = "Concluído com sucesso."
-            Start-Sleep -Seconds 1
-            $form.Close()
+            $btnOK.Visible = $true
+            $form.AcceptButton = $btnOK
+            $btnOK.Focus()
         }
         catch {
             $progress.Style = "Blocks"
