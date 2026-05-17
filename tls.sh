@@ -23,8 +23,6 @@ readonly OPERADOR="999 HIPCOM"
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
-FINAL_LOG_FILE="${SCRIPT_DIR}/InstalaTLS.log"
-readonly FINAL_LOG_FILE
 umask 077
 
 # ---------- proteção contra execução simultânea ----------
@@ -55,8 +53,6 @@ trap 'rm -f "${AUDIT_TMP:-}" 2>/dev/null || true' EXIT
 trap '' INT TERM
 LAST_UI_LOOP_PCT=""
 UI_TEST_LABEL="Testando Comunicação"
-LOGIN_MODO=""
-LOG_ENABLED=0
 ORIG_SQLITE_FLAG=""
 ORIG_TOKEN_EXISTS=0
 ORIG_TOKEN_VALUE=""
@@ -101,7 +97,6 @@ CNPJ_LOJA=""
 IDLOJA_TEF=""
 LOJA_EXIBICAO=""
 TOKEN_TLS=""
-LOG_FINALIZED=0
 TEST_RESULT_MSG=""
 LAST_STATE_SNAPSHOT=""
 FINAL_MODE_TEST_OK=0
@@ -115,7 +110,6 @@ DATAFISC=""
 HORAFISC=""
 CUPOM=""
 TMP_INITIAL_INFO_FILE=""
-
 
 # =========================================================
 # HELPERS GERAIS / DATA / LOG / FORMATAÇÃO
@@ -151,44 +145,6 @@ log_kv(){
 log_kv_masked(){
   local k="$1" v="${2:-}"
   log_kv "$k" "$(mask_secret "$v")"
-}
-
-to_upper(){
-  printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
-}
-
-calc_daily_password(){
-  local dia mes diaMes mult result resultStr len
-
-  dia="$(date +%d)"
-  mes="$(date +%m)"
-  dia=$((10#$dia))
-  mes=$((10#$mes))
-  diaMes=$((dia * 100 + mes))
-
-  if (( dia <= 9 )); then
-    mult=1789
-  elif (( dia <= 19 )); then
-    mult=2789
-  elif (( dia <= 29 )); then
-    mult=3789
-  else
-    mult=4789
-  fi
-
-  result=$((diaMes * mult))
-  resultStr="${result}"
-  len=${#resultStr}
-
-  if (( len >= 7 )); then
-    printf '%s\n' "${resultStr:3:4}"
-  else
-    if (( len > 4 )); then
-      printf '%s\n' "${resultStr:len-4:4}"
-    else
-      printf '%04d\n' "$result"
-    fi
-  fi
 }
 
 trim(){ sed 's/^[[:space:]]*//;s/[[:space:]]*$//'; }
@@ -884,85 +840,6 @@ EOF
   return 0
 }
 
-ui_login_gate(){
-  step_enter "Validando acesso inicial"
-
-  detect_gui_user
-  [[ -f "$GUI_XAUTH" ]] || return 10
-
-  local form_rc values login senha login_up expected_pass
-  expected_pass="$(calc_daily_password)"
-
-  while true; do
-    set +e
-    values="$(
-      run_zenity \
-        --forms \
-        --title="TLS" \
-        --text="Acesso ao sistema" \
-        --add-entry="Login" \
-        --add-password="Senha" \
-        --ok-label="Entrar" \
-        --cancel-label="Cancelar" \
-        --width="$ZENITY_ENTRY_WIDTH" \
-        --height="$ZENITY_ENTRY_HEIGHT"
-    )"
-    form_rc=$?
-    set -e
-
-    log_kv "LOGIN_FORM_RC" "$form_rc"
-
-    if (( form_rc == 10 )); then
-      step_fail "Interface gráfica indisponível para login"
-      return 1
-    fi
-
-    if (( form_rc != 0 )); then
-      ui_cancel_and_exit
-    fi
-
-    login="${values%%|*}"
-    senha="${values#*|}"
-
-    login_up="$(to_upper "$(printf '%s' "$login" | tr -d '[:space:]')")"
-    log_kv "LOGIN_INFORMADO" "$login_up"
-
-    if [[ "$login_up" != "HIPCOM" && "$login_up" != "LOG" ]]; then
-      set +e
-      run_zenity \
-        --error \
-        --title="TLS" \
-        --text="Usuário inválido." \
-        --ok-label="OK" \
-        --width="$ZENITY_ENTRY_WIDTH" \
-        --height="160" >/dev/null
-      set -e
-      continue
-    fi
-
-    if [[ "$senha" != "$expected_pass" ]]; then
-      set +e
-      run_zenity \
-        --error \
-        --title="TLS" \
-        --text="Senha inválida." \
-        --ok-label="OK" \
-        --width="$ZENITY_ENTRY_WIDTH" \
-        --height="160" >/dev/null
-      set -e
-      continue
-    fi
-
-    LOGIN_MODO="$login_up"
-    [[ "$LOGIN_MODO" == "LOG" ]] && LOG_ENABLED=1 || LOG_ENABLED=0
-
-    log_kv "LOGIN_MODO" "$LOGIN_MODO"
-    log_kv "LOG_ENABLED" "$LOG_ENABLED"
-    step_ok "Validando acesso inicial"
-    return 0
-  done
-}
-
 ui_choose_existing_or_new_token(){
   step_enter "Escolhendo entre testar token atual ou cadastrar novo"
 
@@ -1114,61 +991,17 @@ ui_ask_return_to_gsurf(){
 }
 
 ui_ask_extract_log(){
-  local rc
-
-  (( LOG_ENABLED == 1 )) || return 0
-
-  detect_gui_user
-  [[ -f "$GUI_XAUTH" ]] || return 10
-
-  set +e
-  run_zenity \
-    --question \
-    --title="TLS" \
-    --text="Deseja extrair os logs?" \
-    --ok-label="Sim" \
-    --cancel-label="Não" \
-    --width="$ZENITY_ENTRY_WIDTH" \
-    --height="$ZENITY_ENTRY_HEIGHT" >/dev/null
-  rc=$?
-  set -e
-
-  log_kv "UI_EXTRACT_LOG_RC" "$rc"
-
-  if (( rc == 10 )); then
+  if [[ -n "${AUDIT_TMP:-}" && -f "${AUDIT_TMP:-}" ]]; then
     rm -f "$AUDIT_TMP" 2>/dev/null || true
-    LOG_FINALIZED=1
-    return 1
   fi
-
-  if (( rc == 0 )); then
-    # mv may fail cross-device; fall back to cp+rm so the audit file is never
-    # silently lost.
-    if mv -f "$AUDIT_TMP" "$FINAL_LOG_FILE" 2>/dev/null; then
-      chmod 600 "$FINAL_LOG_FILE" 2>/dev/null || true
-    elif cp -a "$AUDIT_TMP" "$FINAL_LOG_FILE" 2>/dev/null; then
-      chmod 600 "$FINAL_LOG_FILE" 2>/dev/null || true
-      rm -f "$AUDIT_TMP" 2>/dev/null || true
-    else
-      printf 'WARN: não foi possível salvar log em %s\n' "$FINAL_LOG_FILE" >&2
-    fi
-    LOG_FINALIZED=1
-    return 0
-  fi
-
-  rm -f "$AUDIT_TMP" 2>/dev/null || true
-  LOG_FINALIZED=1
   return 0
 }
 
 ui_show_final_actions(){
-  # Avoid (( LOG_ENABLED == 1 )) && return 0: when LOG_ENABLED=0, (( )) returns
-  # exit code 1, which would cause set -e to abort before removing AUDIT_TMP.
-  if (( LOG_ENABLED == 1 )); then
-    return 0
+  if [[ -n "${AUDIT_TMP:-}" && -f "${AUDIT_TMP:-}" ]]; then
+    rm -f "$AUDIT_TMP" 2>/dev/null || true
   fi
-  rm -f "$AUDIT_TMP" 2>/dev/null || true
-  LOG_FINALIZED=1
+  return 0
 }
 
 # ui_show_final_result MSG
@@ -1817,7 +1650,7 @@ cleanup(){
     TMP_INITIAL_INFO_FILE=""
   fi
 
-  if (( LOG_FINALIZED == 0 )) && [[ -n "${AUDIT_TMP:-}" && -f "${AUDIT_TMP:-}" ]]; then
+  if [[ -n "${AUDIT_TMP:-}" && -f "${AUDIT_TMP:-}" ]]; then
     rm -f "$AUDIT_TMP" 2>/dev/null || true
   fi
 
@@ -2985,7 +2818,6 @@ done
 
 detect_nc_close_mode
 check_gui_requirements || die "Ambiente gráfico indisponível"
-ui_login_gate || die "Falha na autenticação inicial"
 check_sqlite_integrity || die "Falha de integridade no banco SQLite"
 
 ui_step_min "Coletando dados básicos do PDV" step_collect_cfg || die "Falha ao validar dados do PDV"
